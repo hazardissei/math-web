@@ -4,6 +4,7 @@
 :root{--bg:#f2f2f4;--ink:#1d1d1f;--ink2:#3a3a3c;--sub:#86868b;--sub2:#b4b4b9;--line:#ececf0;--fill:#f2f2f4;--red:#e5352b;--r:24px;
 --sh:0 1px 1px rgba(0,0,0,.02),0 10px 28px -14px rgba(0,0,0,.16);
 --ff:"Inter","Noto Sans JP",-apple-system,"Hiragino Sans","Yu Gothic",sans-serif;
+--ffm:KaTeX_Main,var(--ff);
 --sat:env(safe-area-inset-top,0px);--st:0px;
 --tabb:max(14px,env(safe-area-inset-bottom,0px));--bbp:max(16px,env(safe-area-inset-bottom,0px));
 --gl:max(20px,env(safe-area-inset-left,0px));--gr:max(20px,env(safe-area-inset-right,0px));
@@ -19,7 +20,13 @@ body.paper::before{background:#fff}
 body.dark::before{background:#0e0e10}
 .num{font-family:"Inter",sans-serif;font-feature-settings:"tnum"}
 svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none;display:block}
-.katex{font-size:1.06em}
+/* 本文と数式の字をそろえる：--ffm は数字と英字が数式の字、日本語が本文の字。数式の中の日本語は、大きさと太さも本文に合わせる */
+.katex{font-size:1.06em;font-family:var(--ffm)}
+.katex .cjk_fallback{font-size:.943em}
+.katex .cjk_fallback:not(.textbf){font-weight:500}
+/* 太字（要点など）の中の数式も太字にする */
+b .katex{font-weight:700}
+b .katex .cjk_fallback:not(.textbf){font-weight:inherit}
 [data-act]{cursor:pointer;transition:opacity .12s,transform .12s}
 [data-act]:active{opacity:.6}
 .cd[data-act]:active,.cb[data-act]:active{opacity:1;transform:scale(.985)}
@@ -161,8 +168,13 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .qb{padding:18px 18px 14px}
 .q-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 .q-h .lb{font-weight:700;color:var(--ink)}
-.q-t{font:500 15.5px/1.8 var(--ff);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;word-break:auto-phrase}
-.q-t.c2{-webkit-line-clamp:2}
+.q-more{display:inline-flex;align-items:center;gap:2px;font:600 12px/1.2 var(--ff);color:var(--sub);padding:8px 0 8px 16px;margin:-8px 0}
+.q-more[hidden]{display:none}
+.q-more svg.i{width:14px;height:14px}
+.q-t{position:relative;font:500 15.5px/1.8 var(--ffm);overflow:hidden}
+.q-t p+p{margin-top:2px}
+.q-t .sq{padding-left:2.4em;text-indent:-2.4em}
+.q-t.cut::after{content:"…";position:absolute;left:min(var(--end,0px),calc(100% - 1.2em));bottom:0;padding:0 2px;background:#fff}
 .q-t .katex{white-space:nowrap}
 .qb .ft{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 .st{font:700 12px/1 var(--ff);display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 10px;border-radius:12px}
@@ -183,9 +195,10 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .lvc{display:inline-flex;align-items:center;gap:7px;font:700 13px/1 var(--ff)}
 .pp{padding-top:calc(68px + var(--st));padding-bottom:130px}
 .src{font:600 13px/1.4 var(--ff);color:var(--sub);padding:13px 4px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px}
-.ptx{font:500 17px/2 var(--ff);letter-spacing:.02em;padding:20px 4px 0;word-break:auto-phrase}
+.ptx{font:500 17px/2 var(--ffm);letter-spacing:.02em;padding:20px 4px 0}
 .ptx p+p{margin-top:12px}
 .ptx .sq{padding-left:2.4em;text-indent:-2.4em}
+.sqn{display:inline-block;width:2.4em;text-indent:0}
 
 /* ⑥解いたあと（A 下から出るシート） */
 .sh-t{margin:0 4px 16px}
@@ -219,7 +232,7 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .hs li{display:flex;gap:12px;padding:14px 0;border-top:1px solid var(--line)}
 .hs li:first-child{border-top:none}
 .hs .n{width:26px;height:26px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font:700 13px/1 "Inter",sans-serif;flex:none;margin-top:3px}
-.hs p{font:500 16px/1.85 var(--ff);word-break:auto-phrase}
+.hs p{font:500 16px/1.85 var(--ffm)}
 .peek{position:sticky;top:var(--sat);z-index:15;background:var(--bg);margin-left:calc(-1 * var(--gl));margin-right:calc(-1 * var(--gr));padding:6px var(--gr) 10px var(--gl)}
 .paper .peek{background:#fff}
 .peek .pc{background:#fff;border-radius:18px;box-shadow:var(--sh);padding:12px 14px 11px}
@@ -228,20 +241,58 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .peek .ph span{display:inline-flex;align-items:center;gap:2px}
 .peek .ph span:last-child{flex:none}
 .peek .ph svg.i{width:14px;height:14px}
-.peek .pt{font:500 14px/1.7 var(--ff);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:auto-phrase}
+.peek .pt{font:500 14px/1.7 var(--ffm);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .peek .pc.open .pt{display:block;max-height:46vh;overflow:auto}
 .peek .pc.open .pt p+p{margin-top:4px}
 .peek .pt .katex{white-space:nowrap}
-.exb{font:500 16px/1.95 var(--ff);letter-spacing:.02em;word-break:auto-phrase}
+.exb{font:500 16px/1.95 var(--ffm);letter-spacing:.02em}
 .exb p+p,.exb .katex-display+p{margin-top:8px}
 .exb .katex-display{margin:.35em 0}
-.exb b{font-family:"Inter",sans-serif;font-weight:700}
+.exb b{font-family:var(--ff);font-weight:700}
 .unit{display:flex;flex-wrap:wrap;gap:6px}
 .unit span{height:28px;padding:0 11px;border-radius:14px;background:var(--fill);display:inline-flex;align-items:center;font:700 12px/1 var(--ff);color:var(--ink2)}
 .s-kai.scr{padding-bottom:190px}
 .s-kai .unit{margin-top:14px}
 .fab{position:fixed;right:max(var(--gr),calc(50% - 300px));bottom:calc(82px + var(--bbp));height:48px;padding:0 18px 0 14px;border-radius:24px;background:var(--ink);color:#fff;display:inline-flex;align-items:center;gap:8px;font:700 14px/1 var(--ff);box-shadow:0 12px 28px -10px rgba(0,0,0,.45);z-index:31}
 .exb .katex,.hs .katex{white-space:nowrap}
+
+/* 解説と方針の中身（LaTeX の原稿から変換したデータ）。qw- のクラスはこのデータだけが使う（docs/設計メモ_数学.md の 11/4） */
+.exb .qw-h{font:800 18px/1.3 var(--ff);margin:26px 0 8px;padding-top:14px;border-top:1px solid var(--line)}
+.exb .qw-h:first-child{margin-top:6px;padding-top:0;border-top:none}
+.exb .qw-h small{display:block;font:700 11px/1.4 "Inter",sans-serif;letter-spacing:.08em;color:var(--sub);margin-bottom:2px}
+.qw-box{background:var(--fill);border-radius:16px;padding:12px 14px;margin:12px 0;font-size:15px;line-height:1.85}
+.qw-caution{background:#fff;border:1.5px dashed var(--sub2)}
+.qw-bt{font:800 14px/1.45 var(--ff);margin-bottom:6px}
+.qw-bt small{display:block;font:700 10.5px/1.4 "Inter",sans-serif;letter-spacing:.08em;color:var(--sub)}
+.qw-li{position:relative;padding-left:1.15em;margin:2px 0}
+.qw-li::before{content:"▷";position:absolute;left:0;top:.42em;font-size:.68em;color:var(--sub)}
+.qw-hl,.exb b.qw-hl{font-family:var(--ffm);font-weight:800;background:linear-gradient(transparent 68%,rgba(229,53,43,.18) 68%)}
+.qw-think{border-left:2px solid var(--sub2);padding:2px 0 2px 12px;margin:14px 0;font-size:15px;line-height:1.85}
+.exb .qw-end{text-align:right;font-weight:700;margin-top:0!important}
+.exb .qw-gap{height:14px}
+.exb .qw-rule{border-top:1px solid var(--line);margin:10px 0}
+.exb .qw-fig{display:block;max-width:100%;height:auto;margin:12px auto}
+/* 方針は1つの文章なので、1項目のときは番号を出さない */
+.hs li:only-child{display:block;padding-top:4px}
+.hs li:only-child .n{display:none}
+.hs p+p,.hs .katex-display+p{margin-top:8px}
+/* 別行の式：幅を超えたら横スクロール。続きがあれば右端を薄くする（app.js の終わり） */
+.exb .katex-display,.ptx .katex-display,.hs .katex-display{overflow-x:auto;overflow-y:hidden;padding:2px 0}
+.katex-display.qw-more{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent)}
+/* 問題の画面でも、行内の式を途中で折り返さない。式と直後の句読点も離さない（app.js の終わり） */
+.ptx .katex,.qw-nb{white-space:nowrap}
+/* 小問：番号を独立した行に出し、本文は横幅いっぱいに書く。番号の行が画面の外に出たら、右上に小さく残す（app.js の終わり） */
+.qw-sub{margin-top:16px}
+.qw-subhead{margin-bottom:2px}
+.qw-subno{position:sticky;top:max(8px,calc(var(--qw-top,0px) - 16px));height:0;z-index:16;display:flex;justify-content:flex-end;pointer-events:none}
+.qw-subno span{display:block;height:24px;padding:0 10px;border-radius:12px;background:var(--ink);color:#fff;font:700 12px/24px var(--ff);opacity:0;transition:opacity .15s}
+.qw-past>.qw-subno span{opacity:1}
+/* 問題文の枠を開いたときの小問も、問題の画面（.ptx .sq）と同じく折り返しをそろえる */
+.peek .pt .sq{padding-left:2.4em;text-indent:-2.4em}
+/* 思考プロセスなどの番号：行が送られても本文の左をそろえる */
+.qw-num,.qw-nums{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px .5em;align-items:baseline;margin:6px 0}
+.qw-nums>.qw-num{display:contents}
+.qw-n{font-family:"Inter",sans-serif;font-weight:700;font-feature-settings:"tnum";justify-self:end}
 
 /* ⑩AIに聞く（D よくある質問から → A 下から出るチャット） */
 .sheet.tall{top:15%;display:flex;flex-direction:column}
@@ -255,7 +306,7 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .sgs>span svg.i{width:18px;height:18px;color:var(--sub)}
 .msgs{display:flex;flex-direction:column;gap:10px;flex:1;overflow:auto;min-height:0;margin-top:14px;padding-bottom:4px}
 .bu{align-self:flex-end;max-width:80%;background:var(--ink);color:#fff;border-radius:20px 20px 6px 20px;padding:11px 15px;font:500 15px/1.6 var(--ff);word-break:auto-phrase}
-.ba{align-self:flex-start;max-width:88%;background:var(--fill);border-radius:20px 20px 20px 6px;padding:12px 15px;font:500 15px/1.8 var(--ff);word-break:auto-phrase}
+.ba{align-self:flex-start;max-width:88%;background:var(--fill);border-radius:20px 20px 20px 6px;padding:12px 15px;font:500 15px/1.8 var(--ffm);word-break:auto-phrase}
 .ba .fig{display:block;width:100%;max-width:260px;height:auto;margin-top:8px;background:#fff;border-radius:12px}
 .ai-l{font:700 11px/1 var(--ff);color:var(--sub);margin:4px 0 -4px 6px}
 .typing span{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--sub);margin:0 2px;animation:tp 1s infinite}
@@ -278,7 +329,7 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .mtag{position:absolute;right:12px;top:12px;height:26px;padding:0 11px;border-radius:13px;background:rgba(29,29,31,.8);color:#fff;font:700 11.5px/26px var(--ff);z-index:2}
 .rpin{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--red);color:#fff;font:700 11px/1 "Inter",sans-serif;flex:none;margin-top:3px}
 .mist{list-style:none}
-.mist li{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--line);font:500 15px/1.75 var(--ff);word-break:auto-phrase}
+.mist li{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--line);font:500 15px/1.75 var(--ffm);word-break:auto-phrase}
 .mist li:first-child{border-top:none}
 .marks{display:flex;gap:8px;flex-wrap:wrap}
 .marks span{height:34px;padding:0 13px;border-radius:17px;display:inline-flex;align-items:center;gap:6px;font:700 14px/1 var(--ff);background:#fff;box-shadow:var(--sh)}
@@ -353,4 +404,4 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .s-rec .pr .bar{flex:1}
 .s-rec .pr .mt{width:64px;text-align:right;flex:none}
 
-@media (prefers-reduced-motion:reduce){.v,.typing span,.spin{animation:none}.sheet,.scrim,[data-act]{transition:none}}
+@media (prefers-reduced-motion:reduce){.v,.typing span,.spin{animation:none}.sheet,.scrim,[data-act],.qw-subno span{transition:none}}

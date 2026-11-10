@@ -28,7 +28,7 @@
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function pad(n) { return ('0' + n).slice(-2); }
   function mmss(t) { return pad(Math.floor(t / 60)) + ':' + pad(t % 60); }
-  function paras(t) { return t.map(function (p) { return '<p' + (/^\(/.test(p) ? ' class="sq"' : '') + '>' + esc(p) + '</p>'; }).join(''); }
+  function paras(t) { return t.map(function (p) { return '<p' + (/^\(/.test(p) ? ' class="sq"' : '') + '>' + esc(p).replace(/^(\([^)]*\))　/, '<span class="sqn">$1</span>') + '</p>'; }).join(''); }
   function flat(t) { return esc(t.join(' ')); }
   function pct(s) { return s.total ? Math.round(s.ok / s.total * 100) : 0; }
   function math(el) {
@@ -43,9 +43,13 @@
   }
   function chip(q) { return q.st === 'ok' ? '<span class="st ok">' + ic('ck') + '正解</span>' : q.st === 'ng' ? '<span class="st ng">まちがい</span>' : '<span class="st no">まだ</span>'; }
   function dot(q) { return q.st === 'ok' ? '<span class="dot ok">' + ic('ck') + '</span>' : '<span class="dot ' + q.st + '"></span>'; }
+  /* 問題のカード：小問の前で改行した問題文を、はじめの行だけ見せる。続きがあれば「全文」を出す（行を測るのは app.js の終わり） */
+  var qOpen = {};
+  function moreLabel(open) { return open ? '閉じる' + ic('cu') : '全文' + ic('cd'); }
   function card(q, head, c2) {
-    return '<div class="cd qb" data-id="' + q.id + '"' + act('prob') + '><div class="q-h"><span class="lb">' + head + '</span></div>' +
-      '<div class="q-t' + (c2 ? ' c2' : '') + '">' + flat(q.t) + '</div>' +
+    var open = qOpen[q.id];
+    return '<div class="cd qb" data-id="' + q.id + '"' + act('prob') + '><div class="q-h"><span class="lb">' + head + '</span><span class="q-more"' + act('qmore') + ' hidden>' + moreLabel(open) + '</span></div>' +
+      '<div class="q-t' + (c2 ? ' c2' : '') + (open ? ' open' : '') + '">' + paras(q.t) + '</div>' +
       '<div class="ft">' + chip(q) + '<span class="tmr">' + (q.st === 'no' ? '目安 ' + q.aim + '分' : q.time) + '</span></div></div>';
   }
   function strip(lvs, on) {
@@ -66,6 +70,7 @@
     statusBar(s.body === 'dark');
     app.innerHTML = '<div class="v">' + s.html + '</div>';
     math(app);
+    if (window.MXFIT) window.MXFIT();
     if (s.after) s.after(e);
     window.scrollTo(0, restore ? (e.y || 0) : 0);
   }
@@ -438,6 +443,12 @@
     small: function (el) { var p = cur().p; go('list', { si: p.si, bi: p.bi, ki: +el.dataset.v }); },
     lv: function (el) { cur().p.lv = +el.dataset.v; cur().p.more = false; rerender(); },
     prob: function (el) { go('prob', { id: el.dataset.id, ctx: ctxOf(el) }); },
+    qmore: function (el) {
+      var c = el.closest('.qb'), open = qOpen[c.dataset.id] = !qOpen[c.dataset.id];
+      c.querySelector('.q-t').classList.toggle('open', open);
+      el.innerHTML = moreLabel(open);
+      window.MXFIT();
+    },
     timer: function () { var e = cur(); if (e.tm.done) return; e.tm.run = !e.tm.run; updPill(e); },
     solved: function () { var e = cur(); e.tm.run = false; e.tm.done = true; e.sheet = true; updPill(e); solvedSheet(e); },
     hoshin: function () { var p = cur().p; go('hoshin', { id: p.id, ctx: p.ctx }); },
@@ -550,4 +561,91 @@
   show();
   if (post) post();
   (document.fonts ? document.fonts.ready : Promise.resolve()).then(function () { setTimeout(function () { window.__ready = true; }, 250); });
+})();
+
+/* 式と小問の見せ方（LaTeX の原稿から変換したデータのために足した。docs/設計メモ_数学.md の 11/4）。
+   別行の式：幅の狭いスマホで超える式を 90% まで縮める。それでも超える式は横スクロールのままにして、右端を薄くして続きがあることを示す。
+   行内の式：すぐ後の句読点が行頭に、すぐ前のカッコが行末に来ないように、まとめて1つにする（文字の側に WORD JOINER などを入れても防げない）。
+   小問：解説をスクロールしている間、いま読んでいる小問の番号を右上に残す。
+   一覧のカード：問題文のはじめの行だけ見せて、続きがあれば「全文」を出す。
+   フォントの読み込み後と画面の変化のたびに測り直す。 */
+window.MXFIT = (function () {
+  'use strict';
+  var MIN = 0.9, SEL = '.exb .katex-display,.ptx .katex-display,.hs .katex-display', OPEN = /[（「『【]$/, CLOSE = /^[、。，．）」』】？！：；]/;
+  function glue() {
+    document.querySelectorAll('.katex').forEach(function (k) {
+      if (k.closest('.qw-nb') || k.closest('.katex-display')) return;
+      /* KaTeX の自動描画は式を span で包むので、その外側の文字を見る */
+      var m = k.parentNode.childNodes.length === 1 ? k.parentNode : k, p = m.parentNode, a = m.previousSibling, b = m.nextSibling;
+      var open = a && a.nodeType === 3 && OPEN.test(a.data), close = b && b.nodeType === 3 && CLOSE.test(b.data);
+      if (!open && !close) return;
+      var w = document.createElement('span');
+      w.className = 'qw-nb';
+      p.insertBefore(w, m);
+      if (open) { w.appendChild(document.createTextNode(a.data.slice(-1))); a.data = a.data.slice(0, -1); }
+      w.appendChild(m);
+      if (close) { w.appendChild(document.createTextNode(b.data.charAt(0))); b.data = b.data.slice(1); }
+    });
+  }
+  /* 小問の番号の行が画面の外に出たら、右上に番号を残す。位置は解説の上に貼り付く問題文（.peek）の右下の角。小問の終わりが近づいたら消す */
+  function past() {
+    var subs = document.querySelectorAll('.qw-sub');
+    if (!subs.length) return;
+    var peek = document.querySelector('.peek'), line = peek ? parseFloat(getComputedStyle(peek).top) + peek.offsetHeight : 0;
+    document.documentElement.style.setProperty('--qw-top', line + 'px');
+    subs.forEach(function (s) {
+      var head = s.querySelector('.qw-subhead');
+      if (head) s.classList.toggle('qw-past', head.getBoundingClientRect().bottom < line && s.getBoundingClientRect().bottom > line + 40);
+    });
+  }
+  function more(d) { d.classList.toggle('qw-more', d.scrollLeft + d.clientWidth < d.scrollWidth - 1); }
+  function fit(d) {
+    var k = d.querySelector('.katex');
+    if (!k) return;
+    k.style.fontSize = '';
+    if (d.scrollWidth > d.clientWidth + 1) k.style.fontSize = parseFloat(getComputedStyle(k).fontSize) * Math.max(MIN, d.clientWidth / d.scrollWidth) + 'px';
+    more(d);
+  }
+  /* カードの問題文の n 行目の下の端と右の端。n 行で終わるときは null。式は .base、字は Range で1行ずつ測る */
+  function cutAt(t, n) {
+    var w = document.createTreeWalker(t, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT), range = document.createRange(), lines = 0, bottom = 0, right = 0, x, rs, i;
+    while ((x = w.nextNode())) {
+      if (x.nodeType === 3) { if (x.parentNode.closest('.katex')) continue; range.selectNodeContents(x); rs = range.getClientRects(); }
+      else if (x.matches('.katex-html > .base')) rs = [x.getBoundingClientRect()];
+      else continue;
+      for (i = 0; i < rs.length; i++) {
+        if (rs[i].width < 1) continue;
+        if (!lines || rs[i].top >= bottom - 1) {
+          if (lines === n) return { bottom: bottom, right: right };
+          lines++; bottom = rs[i].bottom; right = rs[i].right;
+        } else { bottom = Math.max(bottom, rs[i].bottom); right = Math.max(right, rs[i].right); }
+      }
+    }
+    return null;
+  }
+  /* 段落が分かれると -webkit-line-clamp の効き方がブラウザでそろわない（Safari は段落ごとに数えることがある）ので、行を測って高さを決める。ふつう3行、c2 は2行 */
+  function clip() {
+    var ts = [].slice.call(document.querySelectorAll('.q-t'));
+    ts.forEach(function (t) { t.style.maxHeight = ''; });
+    ts.map(function (t) { var b = t.getBoundingClientRect(); return { top: b.top, left: b.left, end: cutAt(t, t.classList.contains('c2') ? 2 : 3) }; }).forEach(function (m, i) {
+      var t = ts[i], cut = !!m.end && !t.classList.contains('open');
+      t.parentNode.querySelector('.q-more').hidden = !m.end;
+      t.classList.toggle('cut', cut);
+      if (!cut) return;
+      t.style.maxHeight = m.end.bottom - m.top + 2 + 'px';
+      t.style.setProperty('--end', m.end.right - m.left + 'px');
+    });
+  }
+  function all() { glue(); clip(); document.querySelectorAll(SEL).forEach(fit); past(); }
+  var frame = 0;
+  function later() { cancelAnimationFrame(frame); frame = requestAnimationFrame(all); }
+  new MutationObserver(function (rs) {
+    /* タイマーの数字（.tp）が毎秒変わるだけなら測り直さない */
+    for (var i = 0; i < rs.length; i++) if (!rs[i].target.closest('.tp')) return later();
+  }).observe(document.documentElement, { childList: true, subtree: true });
+  window.addEventListener('resize', later);
+  document.addEventListener('scroll', function (e) { if (e.target.matches && e.target.matches(SEL)) more(e.target); else past(); }, true);
+  if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', later);
+  (document.fonts ? document.fonts.ready : Promise.resolve()).then(later);
+  return all;
 })();
